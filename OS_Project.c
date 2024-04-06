@@ -6,7 +6,9 @@
 #include <unistd.h>
 #include <time.h>
 #include <string.h>
-
+//git add .
+//git commit -m "message"
+//git push
 
 int openFile(char* filename)
 {
@@ -41,8 +43,8 @@ void exploreDirectory(const char *basePath, int file)
                 char modTime[20];
                 strftime(modTime, 20, "%Y-%m-%d %H:%M:%S", localtime(&statbuf.st_mtime));
                 char buffer[2048];
-                int len = snprintf(buffer, sizeof(buffer), "Intrare: %s, Ultima modificare: %s, Marime: %lld bytes\n", path, modTime, (long long)statbuf.st_size);
-                printf("Intrare: %s, Ultima modificare: %s, Marime: %lld bytes,User:%u\n", path, modTime, (long long)statbuf.st_size, statbuf.st_uid);
+                int len = snprintf(buffer, sizeof(buffer), "Entrance: %s, Last modification: %s, Size: %lld bytes\n", path, modTime, (long long)statbuf.st_size);
+                printf("Entrance: %s, Last modification: %s, Size: %lld bytes,User:%u\n", path, modTime, (long long)statbuf.st_size, statbuf.st_uid);
 
                 write(file, buffer, len);
             }
