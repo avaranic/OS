@@ -1,0 +1,8 @@
+Intrare: Test/Test1, Ultima modificare: 2024-04-06 09:53:41, Marime: 96 bytes
+Intrare: Test/Test1/c, Ultima modificare: 2024-04-06 09:53:41, Marime: 96 bytes
+Intrare: Test/Test1/c/file.txt, Ultima modificare: 2024-04-06 09:53:36, Marime: 3 bytes
+Intrare: Test/a.c, Ultima modificare: 2024-04-06 09:53:39, Marime: 3 bytes
+Intrare: Test/b.c, Ultima modificare: 2024-04-06 09:53:43, Marime: 4 bytes
+
+Intrare: .vscode/c_cpp_properties.json, Ultima modificare: 2024-04-06 09:49:44, Marime: 563 bytes
+
