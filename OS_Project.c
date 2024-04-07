@@ -43,8 +43,8 @@ void exploreDirectory(const char *basePath, int file)
                 char modTime[20];
                 strftime(modTime, 20, "%Y-%m-%d %H:%M:%S", localtime(&statbuf.st_mtime));
                 char buffer[2048];
-                int len = snprintf(buffer, sizeof(buffer), "Entrance: %s, Last modification: %s, Size: %lld bytes\n", path, modTime, (long long)statbuf.st_size);
-                printf("Entrance: %s, Last modification: %s, Size: %lld bytes,User:%u\n", path, modTime, (long long)statbuf.st_size, statbuf.st_uid);
+                int len = snprintf(buffer, sizeof(buffer), "Entrance: %s, Last Modification: %s, Size: %lld bytes\n", path, modTime, (long long)statbuf.st_size);
+                printf("Entrance: %s, Last Modification: %s, Size: %lld bytes,User:%u\n", path, modTime, (long long)statbuf.st_size, statbuf.st_uid);
 
                 write(file, buffer, len);
             }
