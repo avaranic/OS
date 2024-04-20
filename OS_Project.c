@@ -6,6 +6,8 @@
 #include <unistd.h>
 #include <time.h>
 #include <string.h>
+#include <sys/types.h>
+#include <sys/wait.h>
 // git add .
 // git commit -m "message"
 // git push
@@ -39,16 +41,19 @@ int openFile(char *filename)
 }
 void exploreDirectory(const char *basePath, int file, snapshot *current, int *lencur)
 {
+    // printf("Exploring directory: %s\n", basePath);
     struct dirent *dp;
     DIR *dir = opendir(basePath);
 
     if (!dir)
     {
+        printf("\nCannot open directory: %s\n\n", basePath);
         return;
     }
 
     while ((dp = readdir(dir)) != NULL)
     {
+        // printf("\n\nFile: %s\n\n\n", dp->d_name);
         if (strcmp(dp->d_name, ".") != 0 && strcmp(dp->d_name, "..") != 0)
         {
             char path[1024];
@@ -60,8 +65,8 @@ void exploreDirectory(const char *basePath, int file, snapshot *current, int *le
                 char modTime[20];
                 strftime(modTime, 20, "%Y-%m-%d %H:%M:%S", localtime(&statbuf.st_mtime));
                 char buffer[2048];
-                int len = snprintf(buffer, sizeof(buffer), "%lu Entrance: %s, Last Modification: %s, Size: %lld bytes, inode = %lu\n", statbuf.st_ino, path, modTime, (long long)statbuf.st_size, statbuf.st_ino);
-                printf("%lu Entrance: %s, Last Modification: %s, Size: %lld bytes,User:%u\n", statbuf.st_ino, path, modTime, (long long)statbuf.st_size, statbuf.st_uid);
+                int len = snprintf(buffer, sizeof(buffer), "%llu Entrance: %s, Last Modification: %s, Size: %lld bytes, inode = %llu\n", statbuf.st_ino, path, modTime, (long long)statbuf.st_size, statbuf.st_ino);
+                // printf("%llu Entrance: %s, Last Modification: %s, Size: %lld bytes,User:%u\n", statbuf.st_ino, path, modTime, (long long)statbuf.st_size, statbuf.st_uid);
 
                 current[*lencur].inode = statbuf.st_ino;
                 strcpy(current[*lencur].snap, buffer);
@@ -81,12 +86,34 @@ void exploreDirectory(const char *basePath, int file, snapshot *current, int *le
 
 void ScrollThroughFolders(int argc, char *argv[], int file, snapshot *current, int *lencur)
 {
-    for (int i = 1; i < argc; i++)
+    int numChildren = argc - 2;
+    for (int i = 2; i < argc; i++)
     {
-        exploreDirectory(argv[i], file, current, lencur);
-        if (i != argc - 1)
-            write(file, "\n", 1);
+
+        pid_t pid = fork();
+        if (pid == -1)
+        {
+            perror("fork Error");
+            exit(EXIT_FAILURE);
+        }
+        else if (pid == 0)
+        {
+            printf("The childs process enters from %d\n", i);
+            exploreDirectory(argv[i], file, current, lencur);
+            exit(EXIT_SUCCESS);
+        }
     }
+    printf("parent process \n");
+    for (int i = 0; i < numChildren; i++)
+    {
+        int status;
+        pid_t child_pid = wait(&status); // Remove duplicate wait() call
+        if (WIFEXITED(status))
+        {
+            printf("Child Process %d terminated with PID %d and exit code %d.\n", i + 1, child_pid, WEXITSTATUS(status));
+        }
+    }
+    printf("All children have terminated.\n");
 }
 
 void loadSnapShot(snapshot *last, int *lenLast)
