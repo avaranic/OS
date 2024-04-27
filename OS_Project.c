@@ -39,7 +39,64 @@ int openFile(char *filename)
     }
     return file;
 }
-void exploreDirectory(const char *basePath, int file, snapshot *current, int *lencur)
+
+
+int checkPermisions(char *filename)
+{
+    if (access(filename, F_OK) == -1)
+    {
+        printf("File %s doesn't exist!\n", filename);
+    }
+    printf("\n\n %s \n\n",filename);
+    if (access(filename, R_OK) == -1 || access(filename, W_OK) == -1 || access(filename, X_OK) == -1)
+    {
+        printf("File %s have missing permissions! We will start Analising for malware\n", filename);
+        pid_t pid = fork();
+        if (pid == -1)
+        {
+            perror("fork error!");
+            exit(EXIT_FAILURE);
+        }
+        else if (pid == 0)
+        {
+            execl("verify_for_malicios.sh", "verify_for_malicios.sh", filename, NULL);
+            perror("exec error");
+            exit(EXIT_FAILURE);
+        }
+        else
+        {
+            int status;
+            waitpid(pid, &status, 0);
+            printf("waitpid status is : %d\n",status);
+            if (WIFEXITED(status))
+            {
+                int exit_status = WEXITSTATUS(status);
+                printf("Child process exited with status %d\n", exit_status);
+                if ( exit_status == 0)
+                {
+                    printf("File %s is safe", filename);
+                    return 0;
+                }
+                else if ( exit_status == 1)
+                {
+                    printf("File %s is dangeros", filename);
+                    return 1;
+                }
+                else
+                {
+                    printf("Unknown exit status");
+                    return -1;
+                }
+            }
+            return -1;
+        }
+    }else{
+        printf("This  %s file has all permissions\n",filename);
+        return 2;
+    }
+    return 3;
+}
+void exploreDirectory(const char *basePath, int file, snapshot *current, int *lencur, const char * safeDir)
 {
     // printf("Exploring directory: %s\n", basePath);
     struct dirent *dp;
@@ -65,6 +122,33 @@ void exploreDirectory(const char *basePath, int file, snapshot *current, int *le
                 char modTime[20];
                 strftime(modTime, 20, "%Y-%m-%d %H:%M:%S", localtime(&statbuf.st_mtime));
                 char buffer[2048];
+
+
+                int danger = checkPermisions(path);
+                if(danger==1){
+                    // DIR*dir=opendir(safeDir);
+                    // if(dir==NULL){
+                    //     printf("error openning safe directory\n");
+                    //     exit(-1);
+                    // }
+                    char command[1024];
+                    sprintf(command,"mv %s %s",path,safeDir);
+                    int result=system(command);
+                    // int result=rename(path,safeDir);
+                    printf("path %s  safeDir: %s\n",path,safeDir);
+                    if(result==0){
+                        printf("File moved succesfully.\n");
+
+                    }else{
+                        printf("Error moving File. result: %d'\n",result);
+                        perror("error");
+
+                    }
+                    
+
+                }
+
+
                 int len = snprintf(buffer, sizeof(buffer), "%llu Entrance: %s, Last Modification: %s, Size: %lld bytes, inode = %llu\n", statbuf.st_ino, path, modTime, (long long)statbuf.st_size, statbuf.st_ino);
                 // printf("%llu Entrance: %s, Last Modification: %s, Size: %lld bytes,User:%u\n", statbuf.st_ino, path, modTime, (long long)statbuf.st_size, statbuf.st_uid);
 
@@ -76,7 +160,7 @@ void exploreDirectory(const char *basePath, int file, snapshot *current, int *le
 
             if (S_ISDIR(statbuf.st_mode))
             {
-                exploreDirectory(path, file, current, lencur);
+                exploreDirectory(path, file, current, lencur, safeDir);
             }
         }
     }
@@ -87,7 +171,9 @@ void exploreDirectory(const char *basePath, int file, snapshot *current, int *le
 void ScrollThroughFolders(int argc, char *argv[], int file, snapshot *current, int *lencur)
 {
     int numChildren = argc - 2;
-    for (int i = 2; i < argc; i++)
+    char safeDir[30];
+    strcpy(safeDir,argv[4]);
+    for (int i = 5; i < argc; i++)
     {
 
         pid_t pid = fork();
@@ -98,12 +184,12 @@ void ScrollThroughFolders(int argc, char *argv[], int file, snapshot *current, i
         }
         else if (pid == 0)
         {
-            printf("The childs process enters from %d\n", i);
-            exploreDirectory(argv[i], file, current, lencur);
+            printf("procesul Copil intri pe aici %d\n", i);
+            exploreDirectory(argv[i], file, current, lencur,safeDir);
             exit(EXIT_SUCCESS);
         }
     }
-    printf("parent process \n");
+    printf("procesul Parinte\n");
     for (int i = 0; i < numChildren; i++)
     {
         int status;
@@ -215,9 +301,10 @@ int main(int argc, char *argv[])
     int lenCurrent;
     loadSnapShot(last, &lenLast);
 
-    if (argc < 2 || argc > 11)
+    if (argc < 5 || argc > 14)
     {
         printf("Error not enough arguemnts.\n");
+        printf("Command structure shoud be ./p -o snapshotName.txt -s isolatedDir testdir1 testdir2.....\n");
         exit(EXIT_FAILURE);
     }
     int file = openFile("snapshot.txt");
