@@ -40,14 +40,13 @@ int openFile(char *filename)
     return file;
 }
 
-
-int checkPermisions(char *filename)
+int checkPermisions(char *filename, int pipe_fd_write)
 {
     if (access(filename, F_OK) == -1)
     {
         printf("File %s doesn't exist!\n", filename);
     }
-    printf("\n\n %s \n\n",filename);
+    printf("\n\n %s \n\n", filename);
     if (access(filename, R_OK) == -1 || access(filename, W_OK) == -1 || access(filename, X_OK) == -1)
     {
         printf("File %s have missing permissions! We will start Analising for malware\n", filename);
@@ -67,36 +66,47 @@ int checkPermisions(char *filename)
         {
             int status;
             waitpid(pid, &status, 0);
-            printf("waitpid status is : %d\n",status);
+            printf("waitpid status is : %d\n", status);
+            char message[1024];
             if (WIFEXITED(status))
             {
                 int exit_status = WEXITSTATUS(status);
                 printf("Child process exited with status %d\n", exit_status);
-                if ( exit_status == 0)
+                if (exit_status == 0)
                 {
+                    snprintf(message, sizeof(message), "%s is SAFE", filename);
                     printf("File %s is safe", filename);
                     return 0;
                 }
-                else if ( exit_status == 1)
+                else if (exit_status == 1)
                 {
+                    snprintf(message, sizeof(message), "%s is DANGEROUS", filename);
                     printf("File %s is dangeros", filename);
                     return 1;
                 }
                 else
                 {
+                    snprintf(message, sizeof(message), "%s has an UNKNOWN status", filename);
                     printf("Unknown exit status");
                     return -1;
                 }
             }
+            else
+            {
+                snprintf(message, sizeof(message), "%s exited abnormally", filename);
+            }
+            write(pipe_fd_write, message, strlen(message));
             return -1;
         }
-    }else{
-        printf("This  %s file has all permissions\n",filename);
+    }
+    else
+    {
+        printf("This  %s file has all permissions\n", filename);
         return 2;
     }
     return 3;
 }
-void exploreDirectory(const char *basePath, int file, snapshot *current, int *lencur, const char * safeDir)
+void exploreDirectory(const char *basePath, int file, snapshot *current, int *lencur, const char *safeDir)
 {
     // printf("Exploring directory: %s\n", basePath);
     struct dirent *dp;
@@ -108,6 +118,12 @@ void exploreDirectory(const char *basePath, int file, snapshot *current, int *le
         return;
     }
 
+    int pipe_fd[2];
+    if (pipe(pipe_fd) == -1)
+    {
+        perror("pipe error");
+        exit(EXIT_FAILURE);
+    }
     while ((dp = readdir(dir)) != NULL)
     {
         // printf("\n\nFile: %s\n\n\n", dp->d_name);
@@ -123,31 +139,34 @@ void exploreDirectory(const char *basePath, int file, snapshot *current, int *le
                 strftime(modTime, 20, "%Y-%m-%d %H:%M:%S", localtime(&statbuf.st_mtime));
                 char buffer[2048];
 
-
-                int danger = checkPermisions(path);
-                if(danger==1){
+                int danger = checkPermisions(path, pipe_fd[1]);
+                if (danger == -1)
+                {
+                    // File status communicated via pipe, continue to next iteration
+                    continue;
+                }
+                else if (danger == 1)
+                {
                     // DIR*dir=opendir(safeDir);
                     // if(dir==NULL){
                     //     printf("error openning safe directory\n");
                     //     exit(-1);
                     // }
                     char command[1024];
-                    sprintf(command,"mv %s %s",path,safeDir);
-                    int result=system(command);
+                    sprintf(command, "mv %s %s", path, safeDir);
+                    int result = system(command);
                     // int result=rename(path,safeDir);
-                    printf("path %s  safeDir: %s\n",path,safeDir);
-                    if(result==0){
+                    printf("path %s  safeDir: %s\n", path, safeDir);
+                    if (result == 0)
+                    {
                         printf("File moved succesfully.\n");
-
-                    }else{
-                        printf("Error moving File. result: %d'\n",result);
-                        perror("error");
-
                     }
-                    
-
+                    else
+                    {
+                        printf("Error moving File. result: %d'\n", result);
+                        perror("error");
+                    }
                 }
-
 
                 int len = snprintf(buffer, sizeof(buffer), "%llu Entrance: %s, Last Modification: %s, Size: %lld bytes, inode = %llu\n", statbuf.st_ino, path, modTime, (long long)statbuf.st_size, statbuf.st_ino);
                 // printf("%llu Entrance: %s, Last Modification: %s, Size: %lld bytes,User:%u\n", statbuf.st_ino, path, modTime, (long long)statbuf.st_size, statbuf.st_uid);
@@ -164,7 +183,8 @@ void exploreDirectory(const char *basePath, int file, snapshot *current, int *le
             }
         }
     }
-
+    close(pipe_fd[1]);
+    close(pipe_fd[0]);
     closedir(dir);
 }
 
@@ -172,7 +192,7 @@ void ScrollThroughFolders(int argc, char *argv[], int file, snapshot *current, i
 {
     int numChildren = argc - 2;
     char safeDir[30];
-    strcpy(safeDir,argv[4]);
+    strcpy(safeDir, argv[4]);
     for (int i = 5; i < argc; i++)
     {
 
@@ -185,7 +205,7 @@ void ScrollThroughFolders(int argc, char *argv[], int file, snapshot *current, i
         else if (pid == 0)
         {
             printf("procesul Copil intri pe aici %d\n", i);
-            exploreDirectory(argv[i], file, current, lencur,safeDir);
+            exploreDirectory(argv[i], file, current, lencur, safeDir);
             exit(EXIT_SUCCESS);
         }
     }
@@ -196,7 +216,7 @@ void ScrollThroughFolders(int argc, char *argv[], int file, snapshot *current, i
         pid_t child_pid = wait(&status); // Remove duplicate wait() call
         if (WIFEXITED(status))
         {
-            printf("Child Process %d terminated with PID %d and exit code %d.\n", i + 1, child_pid, WEXITSTATUS(status));
+            printf("Procesul Copil %d s-a încheiat cu PID-ul %d și cu statusul de ieșire %d.\n", i - 4, child_pid, WEXITSTATUS(status));
         }
     }
     printf("All children have terminated.\n");

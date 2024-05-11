@@ -1,2 +1,8 @@
-24282522 Entrance: Test/Test1, Last Modification: 2024-04-27 11:56:58, Size: 96 bytes, inode = 24282522
-24282541 Entrance: Test/Test1/c, Last Modification: 2024-04-27 11:56:58, Size: 64 bytes, inode = 24282541
+6550280 Entrance: test/cainte.c, Last Modification: 2024-05-11 10:51:37, Size: 45 bytes, inode = 6550280
+6536441 Entrance: test/Test1, Last Modification: 2024-05-11 11:36:45, Size: 128 bytes, inode = 6536441
+6536449 Entrance: test2/portocale.txt, Last Modification: 2024-05-11 10:55:56, Size: 20 bytes, inode = 6536449
+6536403 Entrance: test/Test1/mere.c, Last Modification: 2024-05-11 10:52:28, Size: 185 bytes, inode = 6536403
+8520668 Entrance: test2/test.cpp, Last Modification: 2024-05-02 14:48:18, Size: 2022 bytes, inode = 8520668
+6550260 Entrance: test2/rata.txt, Last Modification: 2024-05-11 10:55:53, Size: 21 bytes, inode = 6550260
+6536475 Entrance: test/Test1/banane.txt, Last Modification: 2024-04-03 16:29:38, Size: 13 bytes, inode = 6536475
+8522781 Entrance: test/test1.cpp, Last Modification: 2024-05-03 10:01:33, Size: 645 bytes, inode = 8522781
